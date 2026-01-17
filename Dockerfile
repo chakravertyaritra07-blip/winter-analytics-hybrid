@@ -1,22 +1,27 @@
-# Start with a Python system
+# Use a lightweight Python Linux image
 FROM python:3.10-slim
 
-# 1. Install R and system tools
+# Prevent Python from writing .pyc files & buffer stdout (better logs)
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies (needed for Python math libs)
+# We do NOT install R here
 RUN apt-get update && apt-get install -y \
-    r-base \
+    gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install Python Libraries
-WORKDIR /app
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 3. Install R Libraries (ggplot2, forecast)
-# We use a simple R script to install them during the build
-RUN Rscript -e "install.packages(c('ggplot2', 'forecast', 'jsonlite', 'readr'), repos='http://cran.rstudio.com/')"
-
-# 4. Copy your code
+# Copy the rest of the project
 COPY . .
 
-# 5. Run the Server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Run the server
+# Make sure to replace 'winter_project' with your actual project folder name if different
+CMD ["gunicorn", "winter_project.wsgi:application", "--bind", "0.0.0.0:8000"]
