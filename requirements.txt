@@ -1,6 +1,10 @@
-django
-pandas
-scikit-learn
-numpy
+Django==5.0.1
 gunicorn
 whitenoise
+pandas
+numpy
+scikit-learn
+statsmodels
+openpyxl
+matplotlib
+seaborn
