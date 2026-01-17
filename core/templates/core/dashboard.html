@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winter Analytics '26 | Hybrid Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --primary: #2563eb; --secondary: #475569; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #1e293b; }
+        
+        .navbar { background: white; box-shadow: 0 2px 15px rgba(0,0,0,0.05); padding: 1rem 0; }
+        .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: var(--primary); }
+        
+        .main-card {
+            background: white;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f1f5f9;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .upload-zone:hover { border-color: var(--primary); background: #eff6ff; }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+        .stat-label { color: var(--secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .verdict-badge {
+            background: #dcfce7; color: #166534;
+            padding: 10px 20px; border-radius: 50px;
+            font-weight: 700; display: inline-block;
+            margin-bottom: 20px; border: 1px solid #bbf7d0;
+        }
+        
+        .r-badge { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+        
+        /* Loading Overlay */
+        #loading {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 9999;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner-border { width: 3rem; height: 3rem; }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h4 class="fw-bold">Running Hybrid Engine...</h4>
+        <p class="text-muted">Orchestrating Python Random Forest & R ARIMA</p>
+    </div>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">❄️ Winter Analytics '26</a>
+            <span class="badge bg-dark">v2.0 Hybrid Core</span>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                
+                <div class="text-center mb-5">
+                    <h1 class="fw-bold display-5 mb-3">Economic Shock Detection</h1>
+                    <p class="lead text-muted">Upload time-series data to benchmark AI (Python) against Econometrics (R).</p>
+                </div>
+
+                <div class="main-card p-5 mb-5">
+                    <form method="post" enctype="multipart/form-data" onsubmit="document.getElementById('loading').style.display='flex'">
+                        {% csrf_token %}
+                        <h4 class="fw-bold mb-4">1. Initialize Engine</h4>
+                        <div class="upload-zone position-relative">
+                            <input type="file" name="dataset" required class="position-absolute top-0 start-0 w-100 h-100 opacity-0" style="cursor: pointer;">
+                            <div class="icon mb-3">📂</div>
+                            <h5 class="fw-bold">Drop your CSV file here</h5>
+                            <p class="text-muted small mb-0">or click to browse (Requires: Year, Value)</p>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-pill shadow-sm">
+                                🚀 Run Analysis
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {% if success %}
+                <div class="main-card p-5 animate__animated animate__fadeInUp">
+                    <div class="text-center">
+                        <span class="verdict-badge {% if 'R' in comparison %}r-badge{% endif %}">
+                            🏆 VERDICT: {{ comparison }}
+                        </span>
+                    </div>
+
+                    <div class="row g-4 mb-5 mt-2">
+                        <div class="col-md-6">
+                            <div class="stat-card">
+                                <div class="stat-label mb-2">Python (Random Forest)</div>
+                                <div class="stat-value">{{ py_mape }}%</div>
+                                <small class="text-muted">MAPE Error Rate</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card" style="border-left: 4px solid #2563eb;">
+                                <div class="stat-label mb-2">R (Auto-ARIMA)</div>
+                                <div class="stat-value">{{ r_mape }}%</div>
+                                <small class="text-muted">MAPE Error Rate</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="fw-bold mb-3">📈 Trend Analysis & Forecast</h5>
+                            <div class="bg-light p-2 rounded-3 border">
+                                <img src="{{ plot_url }}" class="img-fluid rounded shadow-sm w-100" alt="Analysis Graph">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-light rounded-3 border-start border-4 border-warning">
+                        <h6 class="fw-bold text-dark">🔮 5-Year Forecast (Policy Implication)</h6>
+                        <p class="mb-0 text-muted font-monospace">{{ forecast }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if error %}
+                <div class="alert alert-danger mt-4 shadow-sm border-0" role="alert">
+                    <h5 class="fw-bold">⛔ System Error</h5>
+                    {{ error }}
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    
+    <footer class="text-center py-4 text-muted small">
+        Powered by Django 5.0 & R 4.5.2 | Winter Analytics Team
+    </footer>
+
+</body>
+</html>
