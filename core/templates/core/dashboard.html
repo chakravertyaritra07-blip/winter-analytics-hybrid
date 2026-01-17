@@ -3,161 +3,368 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winter Analytics '26 | Hybrid Engine</title>
+    <title>AnalyticsOS | Ultimate Edition</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --primary: #2563eb; --secondary: #475569; --bg: #f8fafc; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #1e293b; }
-        
-        .navbar { background: white; box-shadow: 0 2px 15px rgba(0,0,0,0.05); padding: 1rem 0; }
-        .navbar-brand { font-weight: 800; letter-spacing: -0.5px; color: var(--primary); }
-        
-        .main-card {
-            background: white;
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-            overflow: hidden;
-            transition: transform 0.3s ease;
+        :root {
+            --bg-body: #f8fafc; 
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --brand: #1e293b;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
         }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--brand);
+            letter-spacing: -0.5px;
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+        }
+        .panel:hover { border-color: #cbd5e1; }
         
+        /* Upload Zone */
         .upload-zone {
             border: 2px dashed #cbd5e1;
-            border-radius: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
             padding: 40px;
             text-align: center;
-            background: #f1f5f9;
-            transition: 0.3s;
+            transition: all 0.2s;
             cursor: pointer;
         }
-        .upload-zone:hover { border-color: var(--primary); background: #eff6ff; }
+        .upload-zone:hover { background: #eff6ff; border-color: var(--accent); }
+
+        /* Metrics & Tables */
+        .metric-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); font-weight: 600; }
+        .table-custom th { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
         
-        .stat-card {
+        /* Badges */
+        .shock-badge { 
+            background: #fef2f2; color: #991b1b; 
+            padding: 4px 8px; border-radius: 6px; 
+            font-size: 0.75rem; font-weight: 600; border: 1px solid #fecaca;
+        }
+
+        /* Charts */
+        .chart-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
             background: white;
-            padding: 25px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
-        .stat-label { color: var(--secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .verdict-badge {
-            background: #dcfce7; color: #166534;
-            padding: 10px 20px; border-radius: 50px;
-            font-weight: 700; display: inline-block;
-            margin-bottom: 20px; border: 1px solid #bbf7d0;
-        }
-        
-        .r-badge { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-        
+
         /* Loading Overlay */
         #loading {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.9); z-index: 9999;
+            background: rgba(255,255,255,0.98); z-index: 9999; 
             flex-direction: column; align-items: center; justify-content: center;
         }
-        .spinner-border { width: 3rem; height: 3rem; }
     </style>
 </head>
 <body>
 
     <div id="loading">
-        <div class="spinner-border text-primary mb-3" role="status"></div>
-        <h4 class="fw-bold">Running Hybrid Engine...</h4>
-        <p class="text-muted">Orchestrating Python Random Forest & R ARIMA</p>
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold text-dark">Initializing Model Arena...</h5>
+        <p class="text-secondary small text-center mb-0">Wait for 1 minute while we process the data for better feel.</p>
+        <small class="text-muted mt-2 opacity-75">Running XGBoost, Neural Nets, and ARIMA...</small>
     </div>
 
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="#">❄️ Winter Analytics '26</a>
-            <span class="badge bg-dark">v2.0 Hybrid Core</span>
+            <div class="d-flex align-items-center gap-3">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                    <i class="bi bi-stack text-primary"></i>
+                    AnalyticsOS <span class="badge bg-dark ms-2 fw-normal" style="font-size: 0.7em;">ULTIMATE</span>
+                </a>
+                <div class="vr mx-2 text-secondary opacity-25"></div>
+                <div class="d-flex align-items-center text-secondary small fw-medium">
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success me-2">LIVE</span>
+                    DSGE Hybrid Engine
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-white border text-secondary" onclick="window.location.href='/'">
+                    <i class="bi bi-plus-lg me-1"></i> New Analysis
+                </button>
+            </div>
         </div>
     </nav>
 
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                
-                <div class="text-center mb-5">
-                    <h1 class="fw-bold display-5 mb-3">Economic Shock Detection</h1>
-                    <p class="lead text-muted">Upload time-series data to benchmark AI (Python) against Econometrics (R).</p>
-                </div>
-
-                <div class="main-card p-5 mb-5">
-                    <form method="post" enctype="multipart/form-data" onsubmit="document.getElementById('loading').style.display='flex'">
-                        {% csrf_token %}
-                        <h4 class="fw-bold mb-4">1. Initialize Engine</h4>
-                        <div class="upload-zone position-relative">
-                            <input type="file" name="dataset" required class="position-absolute top-0 start-0 w-100 h-100 opacity-0" style="cursor: pointer;">
-                            <div class="icon mb-3">📂</div>
-                            <h5 class="fw-bold">Drop your CSV file here</h5>
-                            <p class="text-muted small mb-0">or click to browse (Requires: Year, Value)</p>
-                        </div>
-                        <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-pill shadow-sm">
-                                🚀 Run Analysis
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                {% if success %}
-                <div class="main-card p-5 animate__animated animate__fadeInUp">
-                    <div class="text-center">
-                        <span class="verdict-badge {% if 'R' in comparison %}r-badge{% endif %}">
-                            🏆 VERDICT: {{ comparison }}
-                        </span>
-                    </div>
-
-                    <div class="row g-4 mb-5 mt-2">
-                        <div class="col-md-6">
-                            <div class="stat-card">
-                                <div class="stat-label mb-2">Python (Random Forest)</div>
-                                <div class="stat-value">{{ py_mape }}%</div>
-                                <small class="text-muted">MAPE Error Rate</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="stat-card" style="border-left: 4px solid #2563eb;">
-                                <div class="stat-label mb-2">R (Auto-ARIMA)</div>
-                                <div class="stat-value">{{ r_mape }}%</div>
-                                <small class="text-muted">MAPE Error Rate</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <h5 class="fw-bold mb-3">📈 Trend Analysis & Forecast</h5>
-                            <div class="bg-light p-2 rounded-3 border">
-                                <img src="{{ plot_url }}" class="img-fluid rounded shadow-sm w-100" alt="Analysis Graph">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 p-4 bg-light rounded-3 border-start border-4 border-warning">
-                        <h6 class="fw-bold text-dark">🔮 5-Year Forecast (Policy Implication)</h6>
-                        <p class="mb-0 text-muted font-monospace">{{ forecast }}</p>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if error %}
-                <div class="alert alert-danger mt-4 shadow-sm border-0" role="alert">
-                    <h5 class="fw-bold">⛔ System Error</h5>
-                    {{ error }}
-                </div>
-                {% endif %}
-
+    <div class="container py-4">
+        
+        <div class="row mb-4 align-items-end">
+            <div class="col-md-8">
+                <h2 class="fw-bold text-dark mb-1">Macro-Economic Intelligence</h2>
+                <p class="text-secondary mb-0">
+                    Multivariate benchmarking. Supports PWT, ILOSTAT, and Sectoral Indices.
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="badge bg-white text-secondary border fw-normal">
+                    {% now "Y-m-d H:i" %} UTC
+                </span>
             </div>
         </div>
+
+        {% if error %}
+        <div class="alert alert-danger shadow-sm border-0 mb-4">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Pipeline Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if not step %}
+        <div class="panel">
+            <div class="panel-header">
+                <h5 class="panel-title">1. Data Ingestion</h5>
+                <span class="badge bg-light text-dark border"><i class="bi bi-file-earmark-spreadsheet"></i> Smart Scan</span>
+            </div>
+            <form method="post" enctype="multipart/form-data" onsubmit="document.getElementById('loading').style.display='flex'">
+                {% csrf_token %}
+                <div class="upload-zone position-relative">
+                    <input type="file" name="dataset" required class="position-absolute top-0 start-0 w-100 h-100 opacity-0">
+                    <div class="py-2">
+                        <i class="bi bi-cloud-arrow-up fs-1 text-secondary mb-3 d-block opacity-50"></i>
+                        <h6 class="fw-bold text-dark mb-1">Drop Economic Data Here</h6>
+                        <div class="small text-secondary">
+                            Supports .xlsx (Penn World Table), .pdf, or .csv.<br>
+                            <em>Engine will auto-detect Countries, Sectors, and Productivity Metrics.</em>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center mt-4">
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold shadow-sm">
+                        <i class="bi bi-search me-2"></i>Scan Dataset
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if step == 'configure' %}
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="panel border-primary border-opacity-25">
+                    <div class="text-center mb-4">
+                        <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-circle mx-auto d-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px;">
+                            <i class="bi bi-sliders fs-4"></i>
+                        </div>
+                        <h4 class="fw-bold">Configure Analysis Parameters</h4>
+                        <p class="text-secondary small">{{ success_msg }}</p>
+                    </div>
+
+                    <form method="post" onsubmit="document.getElementById('loading').style.display='flex'">
+                        {% csrf_token %}
+                        <input type="hidden" name="filename" value="{{ filename }}">
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary small">Jurisdiction</label>
+                                <select name="country" class="form-select form-select-lg fw-semibold">
+                                    {% for c in countries %}
+                                    <option value="{{ c }}" {% if c == 'India' %}selected{% endif %}>{{ c }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary small">Target Variable</label>
+                                <select name="target_var" class="form-select form-select-lg">
+                                    {% for v in variables %}
+                                    <option value="{{ v }}">{{ v }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-secondary small">Sector (Optional)</label>
+                                <select name="sector_col" class="form-select form-select-lg">
+                                    <option value="">-- None (Aggregate) --</option>
+                                    {% for s in sector_cols %}
+                                    <option value="{{ s }}">{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark w-100 py-3 fw-bold mt-4 shadow-sm">
+                            Run Model Arena (All Tiers) <i class="bi bi-lightning-charge-fill ms-2"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if step == 'results' %}
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-0">Analysis Report: {{ target_var }}</h2>
+                <div class="text-secondary">Region: {{ selected_country }}</div>
+            </div>
+            <div class="text-end">
+                <span class="d-block text-secondary small fw-bold uppercase">Champion Model</span>
+                <span class="badge bg-success fs-6">{{ champion }} (MAPE: {{ champion_score }}%)</span>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="panel h-100 p-0 overflow-hidden">
+                    <div class="p-3 border-bottom bg-light">
+                        <h6 class="fw-bold m-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Model Leaderboard</h6>
+                    </div>
+                    <table class="table table-hover mb-0 table-custom align-middle">
+                        <thead class="table-light"><tr><th>Model Tier</th><th class="text-end">MAPE Error</th></tr></thead>
+                        <tbody>
+                            {% for name, score in results.items %}
+                            <tr>
+                                <td class="fw-medium">{{ name }}</td>
+                                <td class="text-end fw-bold {% if forloop.first %}text-success{% endif %}">{{ score }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="panel h-100 p-0 overflow-hidden">
+                    <div class="p-3 border-bottom bg-light">
+                        <h6 class="fw-bold m-0">Forecast Visualization (The Battle)</h6>
+                    </div>
+                    <div class="p-3">
+                        <img src="data:image/png;base64,{{ battle_plot }}" class="img-fluid w-100 rounded">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-md-6">
+                <div class="panel h-100">
+                    <h6 class="fw-bold mb-3">Error Rate Comparison</h6>
+                    <img src="data:image/png;base64,{{ mape_plot }}" class="img-fluid w-100 rounded">
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="panel h-100">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <h6 class="fw-bold m-0">5-Year Projection</h6>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Champion Logic</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Year</th><th>Predicted Value</th></tr></thead>
+                            <tbody>
+                                {% for year, val in forecast %}
+                                <tr><td class="fw-bold">{{ year }}</td><td class="font-monospace text-primary">{{ val|floatformat:2 }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h6 class="fw-bold mt-4 mb-2 small text-uppercase text-secondary">Identified Shocks</h6>
+                    {% if shocks %}
+                        <div class="d-flex flex-wrap gap-2">
+                        {% for s in shocks %}
+                            <span class="badge shock-badge">{{ s.year }}: {{ s.reason }}</span>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-muted small">No structural deviations detected (>1.5 SD).</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-md-6">
+                <div class="panel h-100 p-0 overflow-hidden">
+                    <div class="p-3 border-bottom bg-light">
+                        <h6 class="fw-bold m-0 small text-center">Data Distribution</h6>
+                    </div>
+                    <div class="p-3">
+                        <img src="data:image/png;base64,{{ hist_plot }}" class="img-fluid w-100 rounded">
+                    </div>
+                </div>
+            </div>
+            
+            {% if pie_plot %}
+            <div class="col-md-6">
+                <div class="panel h-100 p-0 overflow-hidden">
+                    <div class="p-3 border-bottom bg-light">
+                        <h6 class="fw-bold m-0 small text-center">Sector Breakdown</h6>
+                    </div>
+                    <div class="p-3">
+                        <img src="data:image/png;base64,{{ pie_plot }}" class="img-fluid w-100 rounded">
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-md-6">
+                 <div class="panel h-100 d-flex flex-column justify-content-center align-items-center text-center p-5">
+                    <i class="bi bi-pie-chart text-secondary opacity-25 fs-1 mb-3"></i>
+                    <h6 class="text-secondary">Sector Analysis Inactive</h6>
+                    <small class="text-muted">Select a sector column to visualize breakdown.</small>
+                 </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-4 p-4 bg-white border rounded border-start border-4 border-warning shadow-sm">
+            <h6 class="fw-bold small text-uppercase text-dark mb-1">Policy Implication</h6>
+            <p class="small text-muted mb-0">
+                Current trajectory suggests a return to steady-state growth. 
+                If structural shocks persist (check "Identified Shocks" panel), counter-cyclical fiscal intervention is recommended to stabilize volatility.
+            </p>
+        </div>
+
+        {% endif %}
+
     </div>
-    
-    <footer class="text-center py-4 text-muted small">
-        Powered by Django 5.0 & R 4.5.2 | Winter Analytics Team
+
+    <footer class="text-center py-5 mt-5 border-top bg-white">
+        <div class="container text-muted small">
+            <p class="mb-1 fw-semibold">AnalyticsOS v3.0 | Winter Analytics Team</p>
+            <p class="opacity-75">Powered by Django 5.0 (Python) & R 4.5.2 (Econometrics)</p>
+        </div>
     </footer>
 
 </body>
