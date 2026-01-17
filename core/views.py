@@ -7,6 +7,7 @@ matplotlib.use('Agg') # Crucial for Cloud Deployment
 import matplotlib.pyplot as plt
 import seaborn as sns
 from django.shortcuts import render
+from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from io import BytesIO
 import base64
@@ -101,6 +102,10 @@ class ModelArena:
         self.results[name] = round(mape, 2)
         self.predictions[name] = real_preds
 
+# --- UPTIME ROBOT PING ---
+def ping(request):
+    return HttpResponse("Pong", status=200)
+
 # --- MAIN VIEW ---
 def dashboard(request):
     context = {}
@@ -190,26 +195,40 @@ def dashboard(request):
             trend_line = lin.predict(full_X)
             residuals = full_y - trend_line
             std_dev = np.std(residuals)
-            # Sensitive Threshold for Cloud Demo
+            # Sensitive Threshold (1.0) to catch events like COVID annual drops
             shock_idx = np.where(np.abs(residuals) > 1.0 * std_dev)[0]
             shocks = [{'year': int(X[i][0]), 'val': y_raw[i], 'reason': get_shock_context(int(X[i][0]))} for i in shock_idx]
 
-            # --- PLOTTING ---
-            # 1. Battle Plot
+            # --- PLOTTING (With Smart Filters) ---
+            
+            # 1. Battle Plot (Filter out broken models > 200% error)
             plt.figure(figsize=(10, 6))
             plt.plot(df[year_col][cutoff:], y_raw[cutoff:], 'k-', linewidth=3, label='Actual Data')
             colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
+            
+            valid_models_count = 0
             for i, (name, preds) in enumerate(arena.predictions.items()):
-                if len(preds) == len(y_test):
+                model_error = results.get(name, 999)
+                # Only plot if prediction length matches and error is reasonable
+                if len(preds) == len(y_test) and model_error < 200:
                     plt.plot(df[year_col][cutoff:], preds, '--', label=f"{name}", color=colors[i % len(colors)])
+                    valid_models_count += 1
+            
+            if valid_models_count == 0:
+                plt.text(df[year_col].iloc[cutoff], np.mean(y_raw), "All models failed stability check", fontsize=12)
+
             plt.title(f"Model Battle: {target_var} ({selected_country})")
             plt.legend()
             plt.grid(True, alpha=0.3)
             battle_plot = get_image_base64(plt)
 
-            # 2. MAPE Bar Chart
+            # 2. MAPE Bar Chart (Filter crazy errors > 1000%)
+            clean_results = {k: v for k, v in results.items() if v < 1000}
             plt.figure(figsize=(8, 4))
-            sns.barplot(x=list(results.values()), y=list(results.keys()), palette='viridis')
+            if clean_results:
+                sns.barplot(x=list(clean_results.values()), y=list(clean_results.keys()), palette='viridis')
+            else:
+                plt.text(0.5, 0.5, "Data Unstable / Errors > 1000%", ha='center')
             plt.xlabel("MAPE Error % (Lower is Better)")
             mape_plot = get_image_base64(plt)
 
