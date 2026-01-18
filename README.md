@@ -1,13 +1,13 @@
-# 📈 Macro-Economic Intelligence Dashboard (Winter Analytics)
+# Macro-Economic Intelligence Dashboard (Winter Analytics)
 
-## 🚀 Project Overview
+## Project Overview
 This project is a **DSGE-inspired Economic Analytics Engine** designed to analyze how productivity changes and macroeconomic shocks affect industrial sectors over time. 
 
 Built on **Django**, it serves as a "Hybrid" forecasting tool that combines classical econometrics (ARIMA, Linear Trends) with modern Machine Learning (Random Forest, XGBoost) to identify **Economic Shocks**, calculate **Sector Resilience**, and forecast future output.
 
 ---
 
-## 🎯 Objectives
+## Objectives
 Based on the Winter Analytics Problem Statement, this tool aims to:
 1.  **Identify Economic Shocks:** Detect significant deviations (Booms/Busts) in productivity using statistical volatility thresholds (DSGE intuition).
 2.  **Analyze Sectoral Resilience:** Determine which sectors (e.g., Manufacturing vs. Services) recover fastest from shocks like the 2008 Crisis.
@@ -16,11 +16,11 @@ Based on the Winter Analytics Problem Statement, this tool aims to:
 
 ---
 
-## ✨ Features & Capabilities
+## Features & Capabilities
 
 This application is built with a **Hybrid Architecture**. It detects its environment and adjusts its capabilities accordingly.
 
-### ✅ Core Features (Works on Website & Laptop)
+### Core Features (Works on Website & Laptop)
 These features are optimized for speed and work on the deployed Render website as well as locally.
 * **Smart Data Ingestion:** Auto-detects "Country", "Year", and "Sector" columns from messy CSV/Excel files (ILO, Penn World Table, etc.).
 * **Global vs. Local Analysis:**
@@ -36,7 +36,7 @@ These features are optimized for speed and work on the deployed Render website a
 * **Visualizations:** Dynamic Interactive Charts, Pie Charts (Top 10 Sectors), and Distribution Histograms.
 * **CSV Export:** Download model performance metrics.
 
-### 💻 Laptop/Local Exclusive Features (Power Mode)
+### Laptop/Local Exclusive Features (Power Mode)
 These features require heavy computational resources or specific system libraries (like R). They automatically activate when running on a local machine but are disabled on the cloud to prevent timeouts.
 * **R-Bridge (Auto.Arima):** Connects Python to **R's `forecast` package** to run superior statistical ARIMA models.
 * **Facebook Prophet:** Runs the advanced Prophet additive regression model for seasonality detection.
@@ -44,7 +44,7 @@ These features require heavy computational resources or specific system librarie
 
 ---
 
-## 🛠️ Installation Guide (How to Run Locally)
+## Installation Guide (How to Run Locally)
 
 If you are pulling this code to a new laptop, follow these steps to set up the "Power Mode" environment.
 
