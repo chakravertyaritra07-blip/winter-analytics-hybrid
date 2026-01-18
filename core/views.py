@@ -389,13 +389,14 @@ def load_smart_data(path, filename):
     return pd.read_excel(path)
 
 def dashboard(request):
+    # Keywords to identify the main Entity/Country column
     country_kws = ['country', 'area', 'label', 'entity', 'region', 'ref_area', 'description', 'industry']
     year_kws = ['year', 'time', 'date', 'period']
 
     if request.method == 'POST':
         fs = FileSystemStorage()
         
-        # 1. HANDLE FILE UPLOAD (Config Step)
+        # 1. HANDLE UPLOAD
         if 'dataset' in request.FILES:
             myfile = request.FILES['dataset']
             filename = fs.save(myfile.name, myfile)
@@ -403,22 +404,28 @@ def dashboard(request):
                 df = load_smart_data(fs.path(filename), filename)
                 df = check_and_melt(df)
                 
-                # Auto-Detect Columns
-                c_col = next((c for c in df.columns if any(k in c.lower() for k in country_kws)), None)
-                y_col = next((c for c in df.columns if any(k in c.lower() for k in year_kws)), None)
+                # --- FIX: SMARTER COLUMN DETECTION ---
+                # Find all columns that match our keywords
+                c_candidates = [c for c in df.columns if any(k in c.lower() for k in country_kws)]
                 
+                # Prefer columns that do NOT contain "code" or "id" (e.g. prefer "Description" over "Industry code")
+                c_col = None
+                if c_candidates:
+                    # Try to find a non-code column first
+                    c_col = next((c for c in c_candidates if 'code' not in c.lower() and 'id' not in c.lower()), c_candidates[0])
+                
+                y_col = next((c for c in df.columns if any(k in c.lower() for k in year_kws)), None)
                 if not y_col: raise ValueError("No Year column found.")
                 
-                # Identify potential sector columns (any text column that isn't Country or Year)
+                # Identify potential sector columns
                 sector_cols = [c for c in df.select_dtypes(include=['object', 'category']).columns 
                                if c != c_col and c != y_col and 'source' not in c.lower()]
                 
-                # Populate Country List
+                # Populate List
                 countries = sorted(df[c_col].unique().tolist()) if c_col else ["Global/Sector"]
                 if c_col:
-                    countries.insert(0, "All Countries") # <--- ADDED GLOBAL OPTION
+                    countries.insert(0, "All Countries")
                 
-                # Populate Numeric Variables
                 num_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c != y_col]
                 if 'Value' in df.columns and 'Value' not in num_cols: num_cols.append('Value')
                 
@@ -430,39 +437,40 @@ def dashboard(request):
             except Exception as e:
                 return render(request, 'core/dashboard.html', {'error': f"Scan Error: {str(e)}"})
 
-        # 2. HANDLE ANALYSIS RUN (Results Step)
+        # 2. HANDLE ANALYSIS RUN
         elif 'filename' in request.POST:
             filename = request.POST['filename']
             country = request.POST.get('country')
             var = request.POST.get('target_var')
             user_sector_col = request.POST.get('sector_col') 
             
-            # --- LOAD & CLEAN ---
+            # Load
             df = load_smart_data(fs.path(filename), filename)
             df = check_and_melt(df)
             
-            c_col = next((c for c in df.columns if any(k in c.lower() for k in country_kws)), None)
+            # --- FIX: APPLY SAME SMART DETECTION HERE ---
+            c_candidates = [c for c in df.columns if any(k in c.lower() for k in country_kws)]
+            c_col = None
+            if c_candidates:
+                c_col = next((c for c in c_candidates if 'code' not in c.lower() and 'id' not in c.lower()), c_candidates[0])
+                
             y_col = next((c for c in df.columns if any(k in c.lower() for k in year_kws)), None)
             
-            # --- LOGIC FIX: FILTER BEFORE CALCULATING ---
-            # If a specific country is chosen, filter immediately.
-            # If "All Countries" is chosen, keep everything so we can compare nations.
+            # --- SMART FILTERING ---
             if c_col and country != "Global/Sector" and country != "All Countries": 
                 df = df[df[c_col] == country]
 
-            # --- SMART GROUPING (For Pie Chart & Leaderboard) ---
+            # --- SMART GROUPING ---
             group_col = user_sector_col
-            
-            # Case A: "All Countries" selected -> Group by Country (to rank nations in Leaderboard)
+            # Case A: "All Countries" selected -> Group by Country/Entity
             if not group_col and country == "All Countries":
                 group_col = c_col
-            
-            # Case B: Specific Country selected -> Try to find internal sectors (e.g. Industry, Sex)
+            # Case B: Specific Country selected -> Try to find internal sectors
             if not group_col:
                 potential = [c for c in df.select_dtypes(include=['object', 'category']).columns 
                              if c != c_col and c != y_col and 'source' not in c.lower()]
                 if potential:
-                    group_col = potential[0] # Pick the first valid breakdown column found
+                    group_col = potential[0]
 
             # --- FEATURE 1: CALCULATE LEADERBOARD (Uses Detailed Data) ---
             sector_leaderboard = []

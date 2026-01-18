@@ -1,8 +1,0 @@
-Model,MAPE
-Linear (Macro-Augmented),5.75
-ARIMA (Python),6.25
-Naive (Persistence),13.86
-XGBoost (SOTA),13.87
-AI (Random Forest),15.49
-Facebook Prophet,15.81
-Naive (Average),36.58
