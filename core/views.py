@@ -13,7 +13,7 @@ import chardet
 import re
 import warnings
 import logging
-import json # <--- ADDED: Essential for Dropdown
+import json 
 
 # Configure Logging for Debugging
 logger = logging.getLogger(__name__)
@@ -29,9 +29,9 @@ from statsmodels.tsa.arima.model import ARIMA
 # Explicit Boolean Cast for Safety
 RUNNING_ON_RENDER = bool(os.environ.get('RENDER') or os.environ.get('MEMORY_LIMIT'))
 
-# --- HELPER: NUMPY JSON ENCODER (FIXES JS ERROR) ---
+# --- HELPER: NUMPY JSON ENCODER (Critical for JS Dropdown) ---
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """ Special json encoder for numpy types to prevent crashes """
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -380,7 +380,7 @@ def get_simple_plot(df, kind='line'):
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-# --- VIEW CONTROLLER ---
+# --- MAIN CONTROLLER ---
 def load_smart_data(path, filename):
     with open(path, 'rb') as f:
         encoding = chardet.detect(f.read(10000))['encoding']
@@ -395,7 +395,7 @@ def dashboard(request):
     if request.method == 'POST':
         fs = FileSystemStorage()
         
-        # 1. HANDLE FILE UPLOAD
+        # 1. HANDLE FILE UPLOAD (Config Step)
         if 'dataset' in request.FILES:
             myfile = request.FILES['dataset']
             filename = fs.save(myfile.name, myfile)
@@ -409,105 +409,137 @@ def dashboard(request):
                 
                 if not y_col: raise ValueError("No Year column found.")
                 
-                # Context for filtering dropdowns (if categoricals exist)
-                sector_cols = [c for c in df.select_dtypes(include=['object', 'category']).columns if c != c_col]
-
+                # Identify potential sector columns (any text column that isn't Country or Year)
+                sector_cols = [c for c in df.select_dtypes(include=['object', 'category']).columns 
+                               if c != c_col and c != y_col and 'source' not in c.lower()]
+                
+                # Populate Country List
                 countries = sorted(df[c_col].unique().tolist()) if c_col else ["Global/Sector"]
+                if c_col:
+                    countries.insert(0, "All Countries") # <--- ADDED GLOBAL OPTION
+                
+                # Populate Numeric Variables
                 num_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c != y_col]
                 if 'Value' in df.columns and 'Value' not in num_cols: num_cols.append('Value')
                 
                 return render(request, 'core/dashboard.html', {
-                    'step': 'configure', 'filename': filename,
+                    'step': 'configure', 'filename': filename, 
                     'countries': countries, 'variables': num_cols,
                     'sector_cols': sector_cols
                 })
             except Exception as e:
                 return render(request, 'core/dashboard.html', {'error': f"Scan Error: {str(e)}"})
 
-        # 2. HANDLE ANALYSIS RUN
+        # 2. HANDLE ANALYSIS RUN (Results Step)
         elif 'filename' in request.POST:
             filename = request.POST['filename']
             country = request.POST.get('country')
             var = request.POST.get('target_var')
+            user_sector_col = request.POST.get('sector_col') 
             
+            # --- LOAD & CLEAN ---
             df = load_smart_data(fs.path(filename), filename)
             df = check_and_melt(df)
             
-            # Re-identify columns
             c_col = next((c for c in df.columns if any(k in c.lower() for k in country_kws)), None)
             y_col = next((c for c in df.columns if any(k in c.lower() for k in year_kws)), None)
             
-            # --- CALCULATE LEADERBOARD BEFORE FILTERING ---
-            sector_leaderboard = get_sector_leaderboard(df, c_col, y_col, var)
+            # --- LOGIC FIX: FILTER BEFORE CALCULATING ---
+            # If a specific country is chosen, filter immediately.
+            # If "All Countries" is chosen, keep everything so we can compare nations.
+            if c_col and country != "Global/Sector" and country != "All Countries": 
+                df = df[df[c_col] == country]
+
+            # --- SMART GROUPING (For Pie Chart & Leaderboard) ---
+            group_col = user_sector_col
             
-            # Filter Data
-            if c_col and country != "Global/Sector": df = df[df[c_col] == country]
+            # Case A: "All Countries" selected -> Group by Country (to rank nations in Leaderboard)
+            if not group_col and country == "All Countries":
+                group_col = c_col
             
-            # Preprocessing
-            df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
-            df = df.dropna(subset=[y_col]).sort_values(y_col)
-            df[y_col] = df[y_col].astype(int)
+            # Case B: Specific Country selected -> Try to find internal sectors (e.g. Industry, Sex)
+            if not group_col:
+                potential = [c for c in df.select_dtypes(include=['object', 'category']).columns 
+                             if c != c_col and c != y_col and 'source' not in c.lower()]
+                if potential:
+                    group_col = potential[0] # Pick the first valid breakdown column found
+
+            # --- FEATURE 1: CALCULATE LEADERBOARD (Uses Detailed Data) ---
+            sector_leaderboard = []
+            if group_col and len(df[group_col].unique()) > 1:
+                sector_leaderboard = get_sector_leaderboard(df, group_col, y_col, var)
+
+            # --- FEATURE 2: GENERATE PIE CHART (Uses Detailed Data) ---
+            pie_plot = None
+            if group_col:
+                try:
+                    latest_yr = df[y_col].max()
+                    # Ensure numeric year matching
+                    df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
+                    
+                    # Group by the detected column (either Country or Sector)
+                    slice_data = df[df[y_col] == latest_yr].groupby(group_col)[var].sum().sort_values(ascending=False)
+                    
+                    # Top 10 + Others Logic (Prevents Clutter)
+                    if len(slice_data) > 10:
+                        top_10 = slice_data.iloc[:10]
+                        others = pd.Series([slice_data.iloc[10:].sum()], index=['Others'])
+                        slice_data = pd.concat([top_10, others])
+                        
+                    if len(slice_data) > 1:
+                        pie_plot = get_simple_plot(slice_data, kind='pie')
+                except Exception as e: print(f"Pie Error: {e}")
+
+            # --- AGGREGATE TOTALS FOR AI MODELS ---
+            # The AI models (ARIMA/XGBoost) need a single trend line (Time Series).
+            # If we have sectors, sum them up to get the "Country Total".
+            # If we have "All Countries", sum them up to get the "Global Total".
+            df_total = df.groupby(y_col)[var].sum().reset_index()
             
-            # Feature Engineering (Multivariate Check)
-            df, feature_cols = auto_feature_engineering(df, y_col, var)
+            # Restore proper types after aggregation
+            df_total[y_col] = pd.to_numeric(df_total[y_col], errors='coerce')
+            df_total = df_total.sort_values(y_col)
             
-            # --- EXECUTE ENGINES ---
+            # --- FEATURE 3: FEATURE ENGINEERING (On Total Data) ---
+            df_total, feature_cols = auto_feature_engineering(df_total, y_col, var)
             
-            # 1. Shock Analysis
-            shocks = analyze_shocks(df.copy(), y_col, var)
+            # --- FEATURE 4: SHOCK ANALYSIS (DSGE) ---
+            shocks = analyze_shocks(df_total.copy(), y_col, var)
             
-            # 2. YoY Growth
-            df['YoY_Growth'] = df[var].pct_change() * 100
-            # FIX FOR TEMPLATE ERROR: Map selected var to a fixed name
-            df['target_var'] = df[var]
+            # Calculate YoY Growth for Table
+            df_total['YoY_Growth'] = df_total[var].pct_change() * 100
+            df_total['target_var'] = df_total[var] # Template Mapping Fix
             
-            # 3. Model Arena Setup
-            # If no features found, fallback to univariate (Use Year as X)
-            if not feature_cols: 
-                X = df[[y_col]].values
-            else:
-                X = df[feature_cols].values
+            # --- FEATURE 5: MODEL ARENA EXECUTION ---
+            y_raw, X = df_total[var].values, df_total[[y_col]].values
             
-            y_raw = df[var].values
-            
-            # Log Transform Logic
+            # Log Transform Logic (for large economic numbers)
             use_log = (np.mean(y_raw) > 1000) and (np.min(y_raw) > 0)
             y = np.log(y_raw) if use_log else y_raw
             
-            # Train/Test Split
             cutoff = int(len(y) * 0.8)
             
             # Init Arena
             arena = ModelArena(X[:cutoff], y[:cutoff], X[cutoff:], y[cutoff:], 
-                               df_full=df, date_col=y_col, target_col=var, use_log=use_log)
-            
-            # Run All Models
+                               df_full=df_total, date_col=y_col, target_col=var, use_log=use_log)
             steps = 5
             
-            # A. Naive Baselines (Crucial for Benchmark)
+            # Run Benchmarks & Time Series
             arena.run_naive_benchmarks(steps)
+            arena.run_time_series(steps)
             
-            # B. Multivariate (if features exist)
-            full_X = X 
-            
-            # C. Time Series Models
-            arena.run_time_series(steps) 
-            
-            # D. ML Models (RF/XGB) 
+            # Run Multivariate Models
             future_years = np.array([[int(X[-1][0]) + i] for i in range(1, 6)])
             
-            # If no extra macro/productivity features were found, treat Year as X 
-            # and allow Linear/RF/XGB to compete as univariate trend models for the forecast.
             if len(feature_cols) == 0:
                 arena.run_multivariate_models(X, future_years)
             else:
-                # If multivariate, run for test scores but dummy future to avoid crash
-                dummy_future = X[-5:] 
-                arena.run_multivariate_models(X, dummy_future)
-            
+                # If we have extra features but no future data for them, use dummy future
+                # to get test scores (Battle Plot) but warn user on forecast.
+                arena.run_multivariate_models(X, X[-5:])
+
             # --- GATHER RESULTS ---
             results = arena.results
-            # Filter out failures (999.9)
             valid_results = {k:v for k,v in results.items() if v < 900}
             if not valid_results: valid_results = {"Naive (Persistence)": 0.0}
             
@@ -516,72 +548,35 @@ def dashboard(request):
             champion = min(sorted_results, key=sorted_results.get)
             champion_score = sorted_results[champion]
             
-            # Serialize for JS (Safety Fix)
+            # JSON Serialization (Safety Fix for Dropdown)
             all_forecasts_json = json.dumps(arena.all_forecasts, cls=NumpyEncoder)
-            future_years_json = json.dumps(list(range(int(df[y_col].max())+1, int(df[y_col].max())+6)), cls=NumpyEncoder)
+            future_years_json = json.dumps(list(range(int(df_total[y_col].max())+1, int(df_total[y_col].max())+6)), cls=NumpyEncoder)
 
-            # --- SMARTER PIE CHART ENGINE (Top 10 + Others) ---
-            pie_plot = None
-            if c_col:
-                try:
-                    # 1. Reload full data
-                    s_full = load_smart_data(fs.path(filename), filename)
-                    s_full = check_and_melt(s_full)
-                    
-                    # 2. Determine Group Column (Sector or Country)
-                    group_col = c_col
-                    if len(s_full[c_col].unique()) < 2:
-                        potential_sectors = [c for c in s_full.select_dtypes(include=['object', 'category']).columns 
-                                           if c not in [c_col, y_col, 'source.label', 'indicator.label']]
-                        if potential_sectors: group_col = potential_sectors[0]
-
-                    # 3. Aggregate Latest Data
-                    latest = df[y_col].max()
-                    # Ensure numeric conversion for filtering
-                    s_full[y_col] = pd.to_numeric(s_full[y_col], errors='coerce')
-                    slice_data = s_full[s_full[y_col] == latest].groupby(group_col)[var].sum().sort_values(ascending=False)
-
-                    # 4. Apply "Top 10 + Others" Logic to fix clutter
-                    if len(slice_data) > 10:
-                        top_10 = slice_data.iloc[:10]
-                        others = pd.Series([slice_data.iloc[10:].sum()], index=['Others'])
-                        slice_data = pd.concat([top_10, others])
-
-                    # 5. Generate Plot
-                    if len(slice_data) > 1:
-                        pie_plot = get_simple_plot(slice_data, kind='pie')
-                        
-                except Exception as e:
-                    print(f"Pie Chart Error: {e}")
-
-            # Hist Plot
-            hist_plot = get_simple_plot(df[var], kind='hist')
-
-            # Clean YoY for Table
-            yoy_data = [r for r in df.tail(6).to_dict('records') if not np.isnan(r.get('YoY_Growth', np.nan))]
-
-            # Save Results to CSV
+            # --- FEATURE 6: CSV EXPORT ---
             try:
                 results_df = pd.DataFrame(list(sorted_results.items()), columns=['Model', 'MAPE'])
                 results_df.to_csv('media/model_results.csv', index=False)
             except: pass
 
+            # Hist Plot
+            hist_plot = get_simple_plot(df_total[var], kind='hist')
+            
+            # Clean Table Data
+            yoy_data = [r for r in df_total.tail(6).to_dict('records') if not np.isnan(r.get('YoY_Growth', np.nan))]
+
             return render(request, 'core/dashboard.html', {
-                'step': 'results',
-                'results': sorted_results,
+                'step': 'results', 
+                'results': sorted_results, 
                 'champion': champion,
                 'champion_score': champion_score,
                 'all_forecasts_json': all_forecasts_json,
                 'future_years_json': future_years_json,
                 'selected_country': country,
-                'battle_plot': get_image_base64_battle(df[y_col], y_raw, 
-                                                       range(int(df[y_col].max())+1, int(df[y_col].max())+6), 
-                                                       arena.all_forecasts.get(champion, np.zeros(5)), 
-                                                       champion, shocks),
-                'yoy_data': yoy_data,
-                'shocks': shocks,
+                'battle_plot': get_image_base64_battle(df_total[y_col], y_raw, range(int(df_total[y_col].max())+1, int(df_total[y_col].max())+6), arena.all_forecasts.get(champion, np.zeros(5)), champion, shocks),
+                'yoy_data': yoy_data, 
+                'shocks': shocks, 
                 'target_var': var,
-                'pie_plot': pie_plot,
+                'pie_plot': pie_plot, 
                 'hist_plot': hist_plot,
                 'sector_leaderboard': sector_leaderboard 
             })
