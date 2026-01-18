@@ -8,3 +8,4 @@ statsmodels
 openpyxl
 matplotlib
 seaborn
+chardet
